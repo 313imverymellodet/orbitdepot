@@ -155,11 +155,11 @@ public class UI : MonoBehaviour
 
     Button Button(Transform p, string label, Vector2 anchor, Vector2 pos, Vector2 size, Color bg, Color fg, Action onClick, out Text text)
     {
+        // shadow, face and gloss are all children so the shadow sits under the face (a parent Image would draw first)
         var rt = Rect("btn", p, anchor, pos, size);
-        var sh = Sliced(rt, HudArt.Round, new Color(0, 0, 0, 0.35f), -3); sh.rectTransform.anchoredPosition = new Vector2(0, -7);
-        var img = rt.gameObject.AddComponent<Image>();
-        img.sprite = HudArt.Round; img.type = Image.Type.Sliced; img.color = bg;
-        var gloss = Sliced(rt, HudArt.GlossRound, new Color(1, 1, 1, 0.55f));
+        var sh = Sliced(rt, HudArt.Round, new Color(0, 0, 0, 0.3f), -3); sh.rectTransform.anchoredPosition = new Vector2(0, -7);
+        var img = Sliced(rt, HudArt.Round, bg); img.raycastTarget = true;
+        Sliced(rt, HudArt.GlossRound, new Color(1, 1, 1, 0.55f));
         var b = rt.gameObject.AddComponent<Button>();
         b.targetGraphic = img;
         b.onClick.AddListener(() => { Sfx.I.Click(); WebBridge.Vibrate(10); onClick(); });
@@ -458,7 +458,7 @@ public class UI : MonoBehaviour
                 for (int k = 0; k < pips.Count; k++) pips[k].color = k < lv ? r.c : new Color(1, 1, 1, 0.12f);
                 costText.text = max ? "MAX" : Kit.Money(r.cost());
                 bool afford = !max && g.Money >= r.cost();
-                btn.GetComponent<Image>().color = max ? new Color(1, 1, 1, 0.12f) : afford ? Kit.Hex("#35C46A") : new Color(1, 1, 1, 0.1f);
+                ((Image)btn.targetGraphic).color = max ? new Color(1, 1, 1, 0.12f) : afford ? Kit.Hex("#35C46A") : new Color(1, 1, 1, 0.1f);
                 costText.color = afford || max ? Color.white : new Color(1, 1, 1, 0.45f);
             };
             upgradeRefresh.Add(refresh);
@@ -490,6 +490,7 @@ public class UI : MonoBehaviour
         float hs = root.rect.width > root.rect.height ? 1.3f : 1f;
         hud.anchorMin = hud.anchorMax = new Vector2(.5f, .5f);
         hud.sizeDelta = root.rect.size / hs; hud.localScale = Vector3.one * hs;
+        tagScale = hs > 1f ? 1.2f : 1f; tagLayer.localScale = Vector3.one * tagScale;   // world tags grow a little too (they position by screen point)
         UpdateJoystick();
         if (Game.I.Dev && Input.GetKeyDown(KeyCode.H)) canvas.enabled = !canvas.enabled;   // dev: clean frames for store art
 
@@ -540,6 +541,7 @@ public class UI : MonoBehaviour
         foreach (var a in upgradeRefresh) a();
     }
 
+    float tagScale = 1f;
     public void PunchMoney() => moneyPunch = 1f;
     public void PunchQuest() => questPunch = 1f;
     public static string Clock(float secs) { int s = Mathf.Max(0, Mathf.CeilToInt(secs)); return (s / 60) + ":" + (s % 60).ToString("00"); }
@@ -576,7 +578,7 @@ public class UI : MonoBehaviour
             t.Title.rectTransform.anchoredPosition = new Vector2(0, bar ? 28 : 20);
             t.Value.rectTransform.anchoredPosition = new Vector2(0, hasTitle ? (bar ? -6 : -12) : 0);
             if (bar) { t.FillBg.rectTransform.sizeDelta = new Vector2(t.Rt.sizeDelta.x - 40, 8); t.Fill.rectTransform.sizeDelta = new Vector2((t.Rt.sizeDelta.x - 40) * Mathf.Clamp01(t.Progress), 8); }
-            float half = t.Rt.sizeDelta.x * 0.5f * t.Rt.localScale.x * canvas.scaleFactor + 8f;
+            float half = t.Rt.sizeDelta.x * 0.5f * t.Rt.localScale.x * tagScale * canvas.scaleFactor + 8f;
             sp.x = Mathf.Clamp(sp.x, half, Screen.width - half);
             t.Rt.position = sp;
         }

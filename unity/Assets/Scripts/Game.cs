@@ -807,6 +807,7 @@ public class Game : MonoBehaviour
             FloorText.Make(go.transform, new Vector3(0, 0, 0), "+", 90, Kit.A(D.accent, 0.5f), 0, 200);
             pad.Tag = UI.I.Tag(go.transform, Vector3.up * 0.4f, false);
             pad.Tag.Style = WorldTag.Kind.Pad;
+            pad.Tag.Set(pad.Label, Kit.Money(Math.Ceiling(pad.Cost - pad.Paid))); pad.Tag.Progress = (float)(pad.Paid / pad.Cost);
             pads.Add(pad);
             if (!restoring) StartCoroutine(PopIn(go.transform));
         }
