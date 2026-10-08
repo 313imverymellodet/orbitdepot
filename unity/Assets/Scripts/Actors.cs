@@ -119,8 +119,8 @@ public class Player : MonoBehaviour
         Kit.FloorQuad("you", Kit.Ring, Kit.A(Kit.Hex("#ffe066"), 0.9f), 1.1f, root.transform, Vector3.zero, 0.02f);
         var you = UI.I.Tag(root.transform, Vector3.up * 2.05f, false);
         you.Set(null, "YOU"); you.Small = true;
-        p.maxTag = UI.I.Tag(root.transform, Vector3.up * 2.7f, false);
-        p.maxTag.Set("MAX", null);
+        p.maxTag = UI.I.Tag(root.transform, Vector3.up * 2.75f, false);
+        p.maxTag.Style = WorldTag.Kind.Carry;
         return p;
     }
 
@@ -241,7 +241,9 @@ public class Player : MonoBehaviour
         Stack.transform.localPosition = heavy ? new Vector3(0, 0.05f, 0.85f) : new Vector3(0, 0.62f, 0.42f);
         var lv = transform.InverseTransformDirection(vel);
         Stack.Sway = heavy ? Vector3.zero : Vector3.Lerp(Stack.Sway, new Vector3(-lv.x, 0, -lv.z) * 0.035f, 1f - Mathf.Exp(-Time.deltaTime * 6f));
-        maxTag.Visible = Stack.Full && !heavy;
+        // carry chip: how full your hands are (MAX glows)
+        maxTag.Visible = !Stack.Empty && !heavy;
+        if (maxTag.Visible) maxTag.Set(null, Stack.Full ? "MAX" : Stack.Count + " / " + Stack.Capacity);
     }
 }
 

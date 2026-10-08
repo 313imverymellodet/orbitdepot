@@ -90,7 +90,8 @@ public class Sign : MonoBehaviour
 {
     public enum Style { Card, Header, Callout, Label }
     public Text Title, Value;
-    public Image Bg, Stripe, Dot;
+    public Image Bg, Stripe, Dot, BarBg, BarFill;
+    float barShown = -1f;
     public Color Accent;
     public float BobAmp;
     RectTransform rt;
@@ -127,11 +128,20 @@ public class Sign : MonoBehaviour
             var top = Img(s.rt, null, Kit.A(accent, 0.95f)); var trt = top.rectTransform;
             trt.anchorMin = new Vector2(0.03f, 1); trt.anchorMax = new Vector2(0.97f, 1); trt.sizeDelta = new Vector2(0, 8); trt.anchoredPosition = new Vector2(0, -6);
         }
+        if (style == Style.Card || style == Style.Label)
+        {
+            // thin progress bar along the bottom edge (hidden until a station feeds it)
+            s.BarBg = Img(s.rt, null, new Color(1, 1, 1, 0.13f)); var brt = s.BarBg.rectTransform;
+            brt.anchorMin = new Vector2(0, 0); brt.anchorMax = new Vector2(1, 0); brt.offsetMin = new Vector2(style == Style.Label ? 22 : 34, style == Style.Label ? 4 : 9); brt.offsetMax = new Vector2(-22, (style == Style.Label ? 4 : 9) + (style == Style.Label ? 4 : 6));
+            s.BarFill = Img(brt, null, accent); var frt = s.BarFill.rectTransform;
+            frt.anchorMin = Vector2.zero; frt.anchorMax = new Vector2(0, 1); frt.offsetMin = frt.offsetMax = Vector2.zero;
+            s.BarBg.gameObject.SetActive(false);
+        }
         switch (style)
         {
             case Style.Card:
                 s.Title = Txt(s.rt, title, 30, accent, TextAnchor.UpperLeft, new Vector2(34, -12));
-                s.Value = Txt(s.rt, "", 50, Color.white, TextAnchor.LowerLeft, new Vector2(34, 8));
+                s.Value = Txt(s.rt, "", 50, Color.white, TextAnchor.LowerLeft, new Vector2(34, 17));
                 s.Dot = Img(s.rt, Kit.DiscSprite, accent); var drt = s.Dot.rectTransform;
                 drt.anchorMin = drt.anchorMax = new Vector2(1, 1); drt.sizeDelta = new Vector2(14, 14); drt.anchoredPosition = new Vector2(-22, -24);
                 s.Dot.gameObject.SetActive(false);
@@ -177,6 +187,17 @@ public class Sign : MonoBehaviour
     {
         if (Value && value != lastValue) { if (lastValue != null) punch = 1f; Value.text = value; lastValue = value; }
         if (Dot) Dot.gameObject.SetActive(flashDot);
+    }
+
+    // 0..1 fill along the bottom; eases toward the target so counters feel alive
+    public void Bar(float v)
+    {
+        if (!BarBg) return;
+        if (!BarBg.gameObject.activeSelf) BarBg.gameObject.SetActive(true);
+        v = Mathf.Clamp01(v);
+        barShown = barShown < 0 ? v : Mathf.Lerp(barShown, v, 1f - Mathf.Exp(-Time.deltaTime * 8f));
+        BarFill.rectTransform.anchorMax = new Vector2(barShown, 1);
+        BarFill.color = barShown > 0.98f ? Color.Lerp(Accent, Color.white, Mathf.PingPong(Time.time * 2f, 1f) * 0.5f) : Accent;
     }
 
     public bool Visible { get => gameObject.activeSelf; set { if (gameObject.activeSelf != value) gameObject.SetActive(value); } }
@@ -251,7 +272,9 @@ public class InboundDock : MonoBehaviour
         int boxes = ReadyBoxes;
         Header.Set(Loose.Count + " LOOSE CARTON" + (Loose.Count == 1 ? "" : "S"));
         BuildSign.Set(building ? "BUILDING " + buildLanded + " / 8" : Ready.Count >= Ready.Capacity ? "PALLETS FULL" : "WAITING FOR TRUCK");
+        BuildSign.Bar(building ? buildLanded / 8f : 0f);
         ReadySign.Set(Ready.Count + " PALLET" + (Ready.Count == 1 ? "" : "S") + " · " + boxes + " BOXES", Ready.Count > 0);
+        ReadySign.Bar(Ready.Count / (float)Ready.Capacity);
     }
 
     public bool TakePallet(ItemStack into, Player who = null)
@@ -313,6 +336,7 @@ public class BulkStorage : MonoBehaviour
             else if (TakeCarton(p.Stack, p)) Game.I.Tutorial(TutStep.GrabCartons);
         }
         Card.Set(Slots.Count + " PALLET" + (Slots.Count == 1 ? "" : "S") + " · " + Boxes + " BOXES", Slots.Count > 0);
+        Card.Bar(Boxes / (float)(Slots.Capacity * 8));
     }
 
     public bool Store(ItemStack from, Player who = null)
@@ -358,7 +382,10 @@ public class PickRack : MonoBehaviour
         if (Front.PlayerIn && Pick(p.Stack, p, Time.deltaTime)) Game.I.Tutorial(TutStep.Pick);
         for (int i = 0; i < SlotBoxes.Count; i++) { bool on = i < Stock; if (SlotBoxes[i].activeSelf != on) SlotBoxes[i].SetActive(on); }
         BackCard.Set(Stock + " / " + Cap + " IN THIS RACK", Stock < Cap / 3);
+        BackCard.Bar(Stock / (float)Cap);
         FrontCard.Set(Stock + " STOCK · " + Game.I.Orders + " ORDERS", Game.I.Orders > 0 && Stock > 0);
+        FrontCard.Bar(Game.I.Orders / 40f);
+        Front.Progress = Front.PlayerIn && pickT > 0 ? pickT / Game.I.PickTime : -1f;
     }
 
     public bool Restock(ItemStack from, Player who = null)
@@ -445,6 +472,10 @@ public class PackLine : MonoBehaviour
         else packT = Mathf.Max(0, packT - dt * 0.5f);
 
         DropCard.Set(infeed.Count + " ON INFEED");
+        DropCard.Bar(infeed.Count / (float)InfeedCap);
+        PackCard.Bar(Packing ? packT : 0f);
+        CartCard.Bar(Cart.Count / (float)Cart.Capacity);
+        CartLabel.Bar(Cart.Count / (float)Cart.Capacity);
         PackCard.Set(Packing ? "PACKING..." : PackerBot ? "PACKER ON DUTY" : "STAND TO PACK", Packing);
         CartCard.Set(Cart.Count + " / " + Cart.Capacity + " BOXES", Cart.Full);
         CartLabel.Set("CART " + Cart.Count + "/" + Cart.Capacity);
@@ -573,11 +604,14 @@ public class Sorter : MonoBehaviour
 
         int total = InBins;
         DropCard.Set(Chute.Count + " TO SORT");
+        DropCard.Bar(Chute.Count / (float)Chute.Capacity);
         LiftCard.Set(total + " IN BINS", FullestCount() >= 8);
+        LiftCard.Bar(FullestCount() / 16f);
         for (int i = 0; i < 4; i++)
         {
             int c = Bins[i] ? Bins[i].GetComponent<Payload>().Count : 0;
             BinLabels[i].Set("BIN " + Names[i] + "  " + c + "/16");
+            BinLabels[i].Bar(c / 16f);
         }
         // nudge: parcels are piling up in the cart while the sorter sits idle
         BringCart.Visible = Game.I.Save.tut > (int)TutStep.TakeParcels && Chute.Empty && Game.I.Pack.Cart.Count >= 6 && (p.Stack.Empty || p.Stack.TopType != Item.Parcel);
@@ -710,6 +744,8 @@ public class CashPile : MonoBehaviour
             Fly.To(t, p.transform, new Vector3(0, 0.8f, 0), 0.25f, () => ItemPool.Release(Item.Cash, t));
             Game.I.AddMoney(share, true);
             Sfx.I.Coin();
+            UI.I.CashFly(p.transform.position);
+            WebBridge.Vibrate(8);
             Game.I.Tutorial(TutStep.Collect);
             if (Pile.Empty) value = 0;
         }
@@ -733,7 +769,7 @@ public class Pad : MonoBehaviour
     {
         if (Done) return;
         Zone.Progress = (float)(Paid / Cost);
-        if (Tag != null) Tag.Set(Label, Kit.Money(Math.Ceiling(Cost - Paid)));
+        if (Tag != null) { Tag.Set(Label, Kit.Money(Math.Ceiling(Cost - Paid))); Tag.Progress = (float)(Paid / Cost); }
         if (!Zone.PlayerIn) { stay = 0; return; }
         stay += Time.deltaTime;
         if (stay < 0.25f || Game.I.Money < 1) return;

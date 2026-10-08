@@ -82,8 +82,13 @@ public class Game : MonoBehaviour
 
     public bool AutoPlay, Dev;
     public Zone TerminalZone;
-    public string Hint;
+    public string Hint, HintCode;
+    public Color HintColor = Kit.Hex("#ffc93c");
     public Vector3? ArrowTarget;
+    public double IncomePerMin => Save.rate * 60;
+    public int PadsTotal => padDefs != null ? padDefs.Count - 1 : 1;
+    public int PadsDone { get { int n = 0; if (padDefs != null) foreach (var d in padDefs) if (d.id != "newdepot" && Save.done.Contains(d.id)) n++; return n; } }
+    public float ExpansionProgress => Mathf.Clamp01(PadsDone / (float)Mathf.Max(1, PadsTotal));
     public float PowerLeft, PowerCooldown;
     public bool PowerReady => Power && PowerLeft <= 0 && PowerCooldown <= 0;
 
@@ -92,7 +97,7 @@ public class Game : MonoBehaviour
     bool dirty, launching, restoring, hadSave;
     static readonly int[] UpgradeMax = { 6, 8, 10, 6 };
 
-    struct PadDef { public string id; public double cost; public Vector3 pos; public string label; public Action build; }
+    struct PadDef { public string id; public double cost; public Vector3 pos; public string label, desc; public Action build; }
     List<PadDef> padDefs;
 
     // ======================================================================
@@ -392,19 +397,19 @@ public class Game : MonoBehaviour
         double m = DepotMult;
         padDefs = new List<PadDef>
         {
-            new PadDef { id = "power", cost = 30, pos = new Vector3(-5.2f, 0, -6.0f), label = "POWER PACK", build = BuildPower },
-            new PadDef { id = "pally", cost = 60, pos = new Vector3(-7.2f, 0, 3.0f), label = "HIRE PALLY", build = () => Hire(Worker.Job.Pally, true) },
-            new PadDef { id = "upgrades", cost = 90, pos = new Vector3(-0.8f, 0, -8.4f), label = "UPGRADES", build = BuildTerminal },
-            new PadDef { id = "packer", cost = 140, pos = new Vector3(9.5f, 0, -4.1f), label = "HIRE PACKER", build = () => Hire(Worker.Job.Packer, true) },
-            new PadDef { id = "picker", cost = 220, pos = new Vector3(1.8f, 0, 1.4f), label = "HIRE PICKER", build = () => Hire(Worker.Job.Picker, true) },
-            new PadDef { id = "restock", cost = 320, pos = new Vector3(-7.4f, 0, -2.4f), label = "HIRE RESTOCKER", build = () => Hire(Worker.Job.Restocker, true) },
-            new PadDef { id = "rack2", cost = 450, pos = new Vector3(2.6f, 0, 6.0f), label = "TALLER RACK", build = BuildRackLevel },
-            new PadDef { id = "sorter", cost = 600, pos = new Vector3(14.0f, 0, -4.4f), label = "HIRE SORTER", build = () => Hire(Worker.Job.Sorter, true) },
-            new PadDef { id = "forklift", cost = 800, pos = new Vector3(13.8f, 0, 3.0f), label = "HIRE FORKLIFT", build = () => Hire(Worker.Job.Forklift, true) },
-            new PadDef { id = "crew2", cost = 1000, pos = new Vector3(-6.8f, 0, 7.2f), label = "BIGGER TRUCKS", build = () => Toast("BIGGER TRUCKS! More cartons, faster pallets") },
-            new PadDef { id = "autobank", cost = 1300, pos = new Vector3(5.6f, 0, 5.6f), label = "AUTO-PAY", build = () => Toast("AUTO-PAY! Cash goes straight to you") },
-            new PadDef { id = "express", cost = 1800, pos = new Vector3(-1.2f, 0, -3.6f), label = "EXPRESS ORDERS", build = () => Toast("EXPRESS ORDERS! More orders, +25% per box") },
-            new PadDef { id = "newdepot", cost = 4000, pos = new Vector3(4.2f, 0, -9.6f), label = "OPEN " + Depots[(Save.depot + 1) % Depots.Length].name, build = NextDepot },
+            new PadDef { id = "power", cost = 30, pos = new Vector3(-5.2f, 0, -6.0f), label = "POWER PACK", desc = "Stand on it: 2x packing and 2x pay for a minute", build = BuildPower },
+            new PadDef { id = "pally", cost = 60, pos = new Vector3(-7.2f, 0, 3.0f), label = "HIRE PALLY", desc = "Pallet jack bot: moves pallets from 01 to 02", build = () => Hire(Worker.Job.Pally, true) },
+            new PadDef { id = "upgrades", cost = 90, pos = new Vector3(-0.8f, 0, -8.4f), label = "UPGRADES", desc = "Speed, capacity, profit and crew upgrades", build = BuildTerminal },
+            new PadDef { id = "packer", cost = 140, pos = new Vector3(9.5f, 0, -4.1f), label = "HIRE PACKER", desc = "KAI works the packing table nonstop", build = () => Hire(Worker.Job.Packer, true) },
+            new PadDef { id = "picker", cost = 220, pos = new Vector3(1.8f, 0, 1.4f), label = "HIRE PICKER", desc = "JUNE picks orders and feeds the infeed", build = () => Hire(Worker.Job.Picker, true) },
+            new PadDef { id = "restock", cost = 320, pos = new Vector3(-7.4f, 0, -2.4f), label = "HIRE RESTOCKER", desc = "RIO keeps the pick rack full", build = () => Hire(Worker.Job.Restocker, true) },
+            new PadDef { id = "rack2", cost = 450, pos = new Vector3(2.6f, 0, 6.0f), label = "TALLER RACK", desc = "48 pick slots instead of 32", build = BuildRackLevel },
+            new PadDef { id = "sorter", cost = 600, pos = new Vector3(14.0f, 0, -4.4f), label = "HIRE SORTER", desc = "NOVA runs parcels from the cart to the sorter", build = () => Hire(Worker.Job.Sorter, true) },
+            new PadDef { id = "forklift", cost = 800, pos = new Vector3(13.8f, 0, 3.0f), label = "HIRE FORKLIFT", desc = "FORK ships full bins out of dock 07", build = () => Hire(Worker.Job.Forklift, true) },
+            new PadDef { id = "crew2", cost = 1000, pos = new Vector3(-6.8f, 0, 7.2f), label = "BIGGER TRUCKS", desc = "More cartons per truck, faster pallet building", build = () => { } },
+            new PadDef { id = "autobank", cost = 1300, pos = new Vector3(5.6f, 0, 5.6f), label = "AUTO-PAY", desc = "Shipping pays straight into your wallet", build = () => { } },
+            new PadDef { id = "express", cost = 1800, pos = new Vector3(-1.2f, 0, -3.6f), label = "EXPRESS ORDERS", desc = "50% more orders, +25% per box", build = () => { } },
+            new PadDef { id = "newdepot", cost = 4000, pos = new Vector3(4.2f, 0, -9.6f), label = "OPEN " + Depots[(Save.depot + 1) % Depots.Length].name, desc = "A new floor where every box pays 4x", build = NextDepot },
         };
         for (int i = 0; i < padDefs.Count; i++) { var p = padDefs[i]; p.cost *= m; padDefs[i] = p; }
         restoring = true;
@@ -611,7 +616,7 @@ public class Game : MonoBehaviour
     void BuildRackLevel()
     {
         RackFrame(3);
-        if (!restoring) { Burst(rackRoot.position, Kit.Hex("#ffc93c")); Toast("TALLER RACK! 48 slots"); }
+        if (!restoring) Burst(rackRoot.position, Kit.Hex("#ffc93c"));
     }
 
     // ---------------------------------------------------------------- 05 pack line
@@ -746,7 +751,7 @@ public class Game : MonoBehaviour
         pp.Zone = Zone.Make(world, new Vector3(-5.2f, 0, -6.0f), 0.95f, pink, "zpower", "2X", "POWER PACK");
         pp.Card = Sign.Make(world, new Vector3(-5.2f, 1.05f, -8.9f), 3.6f, pink, "POWER PACK");
         Power = pp;
-        if (!restoring) { StartCoroutine(PopIn(root)); Toast("POWER PACK! Stand on it for 2× packing + 2× pay"); }
+        if (!restoring) StartCoroutine(PopIn(root));
     }
 
     void BuildTerminal()
@@ -777,7 +782,7 @@ public class Game : MonoBehaviour
         Workers.Add(w);
         if (job == Worker.Job.DockCrew) Dock.Crew = w.transform;
         if (job == Worker.Job.Packer) w.transform.rotation = Quaternion.Euler(0, 180, 0);
-        if (announce && !restoring) { StartCoroutine(PopIn(w.transform)); Toast(w.Name + " HIRED! " + Worker.Title(job) + " is handled."); }
+        if (announce && !restoring) StartCoroutine(PopIn(w.transform));
     }
 
     public bool HasJob(Worker.Job j) => Workers.Exists(w => w && w.Kind == j);
@@ -801,6 +806,7 @@ public class Game : MonoBehaviour
             pad.Zone = Zone.Make(go.transform, Vector3.zero, 0.95f, D.accent, "padzone");
             FloorText.Make(go.transform, new Vector3(0, 0, 0), "+", 90, Kit.A(D.accent, 0.5f), 0, 200);
             pad.Tag = UI.I.Tag(go.transform, Vector3.up * 0.4f, false);
+            pad.Tag.Style = WorldTag.Kind.Pad;
             pads.Add(pad);
             if (!restoring) StartCoroutine(PopIn(go.transform));
         }
@@ -818,6 +824,9 @@ public class Game : MonoBehaviour
         Sfx.I.Unlock();
         Burst(pos, D.accent);
         pad.OnDone?.Invoke();
+        var def = padDefs.Find(x => x.id == pad.Id);
+        if (pad.Id != "newdepot") UI.I.Celebrate(pad.Id.StartsWith("p") || pad.Label.StartsWith("HIRE") ? "NEW CREW" : "UNLOCKED", pad.Label.Replace("HIRE ", "") + (pad.Label.StartsWith("HIRE") ? " HIRED" : ""), def.desc ?? "", D.accent);
+        WebBridge.Vibrate(40);
         Tutorial(TutStep.Buy);
         NavGrid.MarkDirty();
         WebBridge.Event("unlock_" + pad.Id, (int)Math.Min(int.MaxValue, pad.Cost));
@@ -852,7 +861,7 @@ public class Game : MonoBehaviour
         hadSave = false; RestoreState(); hadSave = true;
         Persist();
         Sfx.I.Unlock();
-        UI.I.Confirm("WELCOME TO " + D.name + "!", "A brand-new floor.\nEvery box ships for 4× more here.", "LET'S SHIP!", null);
+        UI.I.Celebrate("NEW DEPOT", D.name, "Every box ships for 4x more here", D.accent);
     }
 
     // ======================================================================
@@ -889,7 +898,7 @@ public class Game : MonoBehaviour
             Save.quest++;
             Out.Cash.Deposit(reward, Player.transform.position + Vector3.up * 3f);
             Sfx.I.LevelUp();
-            UI.I.FloatText(Player.transform.position + Vector3.up * 2.8f, "QUEST COMPLETE!  +" + Kit.Money(reward), Kit.Hex("#FFC93C"), 52);
+            UI.I.Celebrate("QUEST COMPLETE", "+" + Kit.Money(reward), cur.text.Replace("{0}", "").Trim(), Kit.Hex("#FFC93C"));
             UI.I.PunchQuest();
             WebBridge.Event("quest_" + Save.quest);
             dirty = true;
@@ -926,43 +935,47 @@ public class Game : MonoBehaviour
         dirty = true;
         WebBridge.Event("tut_" + s.ToString().ToLower());
         if (Save.tut == (int)TutStep.Buy) RefreshPads();
-        if (Save.tut == (int)TutStep.Done) { Toast("YOU RUN THIS FLOOR NOW! Keep expanding."); Persist(); }
+        if (Save.tut == (int)TutStep.Done) { UI.I.Celebrate("TRAINING COMPLETE", "YOU RUN THIS FLOOR", "Hire a crew and keep expanding", Kit.Hex("#6dff9a")); Persist(); }
     }
+
+    static readonly Color cDock = Kit.Hex("#ffc93c"), cBulk = Kit.Hex("#3cc7ff"), cRack = Kit.Hex("#c792ff"), cBack = Kit.Hex("#9da8ff"),
+        cDrop = Kit.Hex("#7fd4ff"), cPack = Kit.Hex("#ffe066"), cCart = Kit.Hex("#ffb35c"), cSort = Kit.Hex("#ff7ab8"), cOut = Kit.Hex("#6dff9a");
+    void Code(string code, Color c) { HintCode = code; HintColor = c; }
 
     void UpdateGuidance()
     {
-        ArrowTarget = null; Hint = null;
+        ArrowTarget = null; Hint = null; Code("GO", Kit.Hex("#ffc93c"));
         var step = (TutStep)Save.tut;
         var top = Player.Stack.Empty ? (Item?)null : Player.Stack.TopType;
         switch (step)
         {
             case TutStep.Move: Hint = "Drag anywhere to move"; break;
-            case TutStep.TakePallet: Hint = Dock.Ready.Count > 0 ? "Grab a pallet at INBOUND 01" : "The dock crew is building a pallet..."; ArrowTarget = Dock.Zone.transform.position; break;
-            case TutStep.StorePallet: Hint = "Store the pallet in BULK STORAGE 02"; ArrowTarget = Bulk.Zone.transform.position; break;
-            case TutStep.GrabCartons: Hint = "Break it down: grab cartons at 02"; ArrowTarget = Bulk.Zone.transform.position; break;
-            case TutStep.Restock: Hint = "Restock the rack from the back (03)"; ArrowTarget = Rack.Back.transform.position; break;
-            case TutStep.Pick: Hint = "Pick orders at the rack front (04)"; ArrowTarget = Rack.Front.transform.position; break;
-            case TutStep.DropTotes: Hint = "Drop totes on the infeed (05A)"; ArrowTarget = Pack.DropZone.transform.position; break;
-            case TutStep.Pack: Hint = "Stand at the packing table to pack (05B)"; ArrowTarget = Pack.PackZone.transform.position; break;
-            case TutStep.TakeParcels: Hint = "Take the packed boxes from the cart (05C)"; ArrowTarget = Pack.CartZone.transform.position; break;
-            case TutStep.Sort: Hint = "Drop boxes at the sorter (06A)"; ArrowTarget = Sort.DropZone.transform.position; break;
-            case TutStep.TakeBin: Hint = "Forklift a bin at 06B"; ArrowTarget = Sort.LiftZone.transform.position; break;
-            case TutStep.Ship: Hint = "Ship the bin at OUTBOUND 07"; ArrowTarget = Out.Zone.transform.position; break;
-            case TutStep.Collect: Hint = "Get paid!"; ArrowTarget = Out.Cash.Zone.transform.position; break;
+            case TutStep.TakePallet: Code("01", cDock); Hint = Dock.Ready.Count > 0 ? "Grab a pallet at the inbound dock" : "The dock crew is building a pallet..."; ArrowTarget = Dock.Zone.transform.position; break;
+            case TutStep.StorePallet: Code("02", cBulk); Hint = "Store the pallet in bulk storage"; ArrowTarget = Bulk.Zone.transform.position; break;
+            case TutStep.GrabCartons: Code("02", cBulk); Hint = "Break it down: grab cartons"; ArrowTarget = Bulk.Zone.transform.position; break;
+            case TutStep.Restock: Code("03", cBack); Hint = "Restock the rack from the back"; ArrowTarget = Rack.Back.transform.position; break;
+            case TutStep.Pick: Code("04", cRack); Hint = "Pick orders at the rack front"; ArrowTarget = Rack.Front.transform.position; break;
+            case TutStep.DropTotes: Code("05A", cDrop); Hint = "Drop totes on the infeed belt"; ArrowTarget = Pack.DropZone.transform.position; break;
+            case TutStep.Pack: Code("05B", cPack); Hint = "Stand at the packing table to pack"; ArrowTarget = Pack.PackZone.transform.position; break;
+            case TutStep.TakeParcels: Code("05C", cCart); Hint = "Take the packed boxes from the cart"; ArrowTarget = Pack.CartZone.transform.position; break;
+            case TutStep.Sort: Code("06A", cSort); Hint = "Drop boxes at the sorter"; ArrowTarget = Sort.DropZone.transform.position; break;
+            case TutStep.TakeBin: Code("06B", cCart); Hint = "Forklift the fullest bin"; ArrowTarget = Sort.LiftZone.transform.position; break;
+            case TutStep.Ship: Code("07", cOut); Hint = "Ship the bin at the outbound dock"; ArrowTarget = Out.Zone.transform.position; break;
+            case TutStep.Collect: Code("$", cOut); Hint = "Get paid!"; ArrowTarget = Out.Cash.Zone.transform.position; break;
             case TutStep.Buy:
                 var pad = pads.Count > 0 ? pads[0] : null;
-                if (pad) { Hint = "Stand on the pad to build"; ArrowTarget = pad.transform.position; }
+                if (pad) { Code("+", D.accent); Hint = "Stand on the pad to build"; ArrowTarget = pad.transform.position; }
                 break;
             default:
                 var afford = AffordablePad();
                 if (afford) ArrowTarget = afford.transform.position;
-                else if (top == Item.Gaylord) { Hint = "Ship it at 07"; ArrowTarget = Out.Zone.transform.position; }
-                else if (Rack.Stock == 0 && Orders > 5 && !HasJob(Worker.Job.Restocker)) { Hint = "Rack's empty! Restock from bulk (02 to 03)"; ArrowTarget = Bulk.Slots.Count > 0 ? Bulk.Zone.transform.position : Dock.Zone.transform.position; }
+                else if (top == Item.Gaylord) { Code("07", cOut); Hint = "Ship it at the outbound dock"; ArrowTarget = Out.Zone.transform.position; }
+                else if (Rack.Stock == 0 && Orders > 5 && !HasJob(Worker.Job.Restocker)) { Code("03", cBack); Hint = "Rack's empty! Restock it from bulk"; ArrowTarget = Bulk.Slots.Count > 0 ? Bulk.Zone.transform.position : Dock.Zone.transform.position; }
                 break;
         }
         // a few tutorial steps can't happen yet: say why instead of pointing at an empty station
-        if (step == TutStep.Pick && Rack.Stock == 0 && top != Item.Carton) { Hint = "Grab cartons at 02 first"; ArrowTarget = Bulk.Zone.transform.position; }
-        if (step == TutStep.TakeParcels && Pack.Cart.Empty) { Hint = Pack.OnInfeed > 0 ? "Keep packing at 05B" : "Pick more orders (04)"; ArrowTarget = Pack.OnInfeed > 0 ? Pack.PackZone.transform.position : Rack.Front.transform.position; }
+        if (step == TutStep.Pick && Rack.Stock == 0 && top != Item.Carton) { Code("02", cBulk); Hint = "Grab cartons at bulk storage first"; ArrowTarget = Bulk.Zone.transform.position; }
+        if (step == TutStep.TakeParcels && Pack.Cart.Empty) { Code(Pack.OnInfeed > 0 ? "05B" : "04", Pack.OnInfeed > 0 ? cPack : cRack); Hint = Pack.OnInfeed > 0 ? "Keep packing" : "Pick more orders"; ArrowTarget = Pack.OnInfeed > 0 ? Pack.PackZone.transform.position : Rack.Front.transform.position; }
     }
 
     // ======================================================================
