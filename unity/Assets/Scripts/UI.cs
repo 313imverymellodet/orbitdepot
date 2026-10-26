@@ -34,7 +34,7 @@ public class UI : MonoBehaviour
 {
     public static UI I;
     Canvas canvas; CanvasScaler scaler;
-    RectTransform root, hud, tagLayer, fx;
+    RectTransform root, safe, hud, tagLayer, fx;
     Font F => Kit.Font;
 
     public static readonly Color Panel = new Color(0.047f, 0.07f, 0.13f, 0.9f), Ink = Kit.Hex("#0c1322"),
@@ -53,9 +53,15 @@ public class UI : MonoBehaviour
     HudBar expBar, questBar;
     float moneyPunch, questPunch, objShown; double shownMoney;
     string lastHint;
-    public bool Blocking => modal != null && modalBlocks;
+    public bool Blocking => (modal != null && modalBlocks) || Paused;
     bool modalBlocks;
     RectTransform modal;
+    Action modalBack;
+
+    // pause (Play build only): the HUD button, Android back, and leaving the app
+    public bool Paused { get; private set; }
+    RectTransform pauseUI;
+    Text pauseSound, pauseHaptics;
 
     readonly List<WorldTag> tags = new List<WorldTag>();
 
@@ -73,7 +79,8 @@ public class UI : MonoBehaviour
         root = (RectTransform)transform;
 
         tagLayer = Fill("tags", root);
-        hud = Fill("hud", root);
+        safe = Fill("safe", root); safe.gameObject.AddComponent<SafeArea>();   // notches, punch-holes, the gesture bar
+        hud = Fill("hud", safe);
         BuildHud();
         fx = Fill("fx", root);
 
@@ -85,6 +92,7 @@ public class UI : MonoBehaviour
         var kr = Img(joyKnob, HudArt.RingS, new Vector2(.5f, .5f), Vector2.zero, new Vector2(112, 112)); kr.color = Kit.A(Cyan, 0.7f);
         joyBase.gameObject.SetActive(false);
 
+        if (Mobile.Native) BuildPause();
         RefreshSound();
         StartCoroutine(Intro());
     }
@@ -187,12 +195,13 @@ public class UI : MonoBehaviour
         expBar = new HudBar(depotPanel, new Vector2(.5f, 0), new Vector2(0, 28), new Vector2(330, 22), Gold, Kit.Hex("#fff3c4"), 0, 0, F);
         expText = Txt(depotPanel, "", 24, new Vector2(.5f, 0), new Vector2(0, 54), Kit.A(Gold, 0.9f), TextAnchor.MiddleCenter, 380);
 
-        // sound
+        // sound (on the phone this corner is the pause button; sound and vibration live in the pause menu)
         soundBtn = (RectTransform)Button(hud, "", new Vector2(1, 1), new Vector2(-92, -72), new Vector2(124, 112), Kit.A(Panel, 0.95f), Color.white, () =>
         {
-            Game.I.Save.muted = !Game.I.Save.muted; Sfx.I.SetMuted(Game.I.Save.muted); RefreshSound();
+            if (Mobile.Native) { Pause(); return; }
+            ToggleSound();
         }, out soundText).transform;
-        soundText.fontSize = 26;
+        soundText.fontSize = Mobile.Native ? 48 : 26;
 
         // quest card
         questCard = PanelBox(hud, new Vector2(0, 1), new Vector2(40 + 240, -214), new Vector2(480, 128), Kit.A(Gold, 0.3f));
@@ -234,7 +243,14 @@ public class UI : MonoBehaviour
         return rt;
     }
 
-    public void RefreshSound() => soundText.text = Game.I.Save.muted ? "SOUND\nOFF" : "SOUND\nON";
+    void ToggleSound() { Game.I.Save.muted = !Game.I.Save.muted; Sfx.I.SetMuted(Game.I.Save.muted); RefreshSound(); }
+
+    public void RefreshSound()
+    {
+        soundText.text = Mobile.Native ? "II" : Game.I.Save.muted ? "SOUND\nOFF" : "SOUND\nON";
+        if (pauseSound) pauseSound.text = Game.I.Save.muted ? "SOUND: OFF" : "SOUND: ON";
+        if (pauseHaptics) pauseHaptics.text = PlayerPrefs.GetInt("haptics_off", 0) == 1 ? "VIBRATION: OFF" : "VIBRATION: ON";
+    }
 
     // ---------------- world tags ----------------
     public WorldTag Tag(Transform follow, Vector3 offset, bool icon)
@@ -379,13 +395,14 @@ public class UI : MonoBehaviour
     RectTransform upgrades;
     readonly List<Action> upgradeRefresh = new List<Action>();
 
-    RectTransform Modal(float h, bool blocking = true)
+    RectTransform Modal(float h, bool blocking = true, Action back = null)
     {
         CloseModal();
         modal = Fill("modal", root);
-        modalBlocks = blocking;
+        modalBlocks = blocking; modalBack = back;
         if (blocking) { var shade = modal.gameObject.AddComponent<Image>(); shade.color = new Color(0.01f, 0.02f, 0.06f, 0.62f); }
-        var card = PanelBox(modal, blocking ? new Vector2(.5f, .5f) : new Vector2(.5f, 0), blocking ? new Vector2(0, -40) : new Vector2(0, h * 0.5f + 60), new Vector2(940, h), Kit.A(Cyan, 0.4f), 0.97f);
+        var ms = Fill("safe", modal); ms.gameObject.AddComponent<SafeArea>();
+        var card = PanelBox(ms, blocking ? new Vector2(.5f, .5f) : new Vector2(.5f, 0), blocking ? new Vector2(0, -40) : new Vector2(0, h * 0.5f + 60), new Vector2(940, h), Kit.A(Cyan, 0.4f), 0.97f);
         var bgImg = card.GetComponentsInChildren<Image>()[1]; bgImg.raycastTarget = true;
         var top = Img(card, null, new Vector2(.5f, 1), new Vector2(0, -8), new Vector2(860, 6)); top.color = Kit.A(Cyan, 0.8f); top.preserveAspect = false;
         StartCoroutine(PopIn(card));
@@ -401,7 +418,7 @@ public class UI : MonoBehaviour
     public void CloseModal()
     {
         if (modal) Destroy(modal.gameObject);
-        modal = null; upgrades = null;
+        modal = null; upgrades = null; modalBack = null;
         upgradeRefresh.Clear();
     }
 
@@ -471,7 +488,8 @@ public class UI : MonoBehaviour
 
     public void Confirm(string title, string body, string ok, Action onOk, string ad = null, Action onAd = null, string cancel = null)
     {
-        var card = Modal(ad != null || cancel != null ? 660 : 540);
+        // Android back on a prompt: the cancel button if there is one, otherwise the plain OK (never the ad)
+        var card = Modal(ad != null || cancel != null ? 660 : 540, true, cancel != null ? null : onOk);
         var t = Txt(card, title, 60, new Vector2(.5f, 1), new Vector2(0, -92), Color.white); Shadow(t, 3);
         var b = Txt(card, body, 36, new Vector2(.5f, 1), new Vector2(0, -220), Soft, TextAnchor.MiddleCenter, 820);
         b.horizontalOverflow = HorizontalWrapMode.Wrap; b.rectTransform.sizeDelta = new Vector2(820, 160);
@@ -479,6 +497,62 @@ public class UI : MonoBehaviour
         if (ad != null) Button(card, "WATCH AD: " + ad, new Vector2(.5f, 0), new Vector2(0, y + 150), new Vector2(720, 120), Gold, Ink, () => { CloseModal(); onAd(); }, out _);
         Button(card, ok, new Vector2(.5f, 0), new Vector2(cancel != null ? 180 : 0, y - (ad != null ? 10 : 0)), new Vector2(cancel != null ? 340 : 720, 120), Kit.Hex("#35C46A"), Color.white, () => { CloseModal(); onOk?.Invoke(); }, out _);
         if (cancel != null) Button(card, cancel, new Vector2(.5f, 0), new Vector2(-190, y), new Vector2(340, 120), new Color(1, 1, 1, 0.12f), Color.white, CloseModal, out _);
+    }
+
+    // ---------------- pause (Play build) ----------------
+    void BuildPause()
+    {
+        pauseUI = Fill("pause", root);
+        var shade = pauseUI.gameObject.AddComponent<Image>(); shade.color = new Color(0.01f, 0.02f, 0.06f, 0.86f);
+        var ps = Fill("safe", pauseUI); ps.gameObject.AddComponent<SafeArea>();
+        var card = PanelBox(ps, new Vector2(.5f, .5f), Vector2.zero, new Vector2(820, 1060), Kit.A(Cyan, 0.4f), 0.97f);
+        Txt(card, "ORBIT DEPOT", 28, new Vector2(.5f, 1), new Vector2(0, -60), Cyan);
+        var t = Txt(card, "PAUSED", 96, new Vector2(.5f, 1), new Vector2(0, -150), Color.white); Shadow(t, 4);
+        Button(card, "RESUME", new Vector2(.5f, 1), new Vector2(0, -320), new Vector2(680, 150), Kit.Hex("#35C46A"), Color.white, Resume, out var rl);
+        rl.fontSize = 60;
+        Button(card, "", new Vector2(.5f, 1), new Vector2(0, -490), new Vector2(680, 120), new Color(1, 1, 1, 0.12f), Color.white, ToggleSound, out pauseSound);
+        Button(card, "", new Vector2(.5f, 1), new Vector2(0, -630), new Vector2(680, 120), new Color(1, 1, 1, 0.12f), Color.white, () =>
+        {
+            PlayerPrefs.SetInt("haptics_off", PlayerPrefs.GetInt("haptics_off", 0) == 1 ? 0 : 1); PlayerPrefs.Save();
+            Mobile.Vibrate(30); RefreshSound();
+        }, out pauseHaptics);
+        Button(card, "SHARE ORBIT DEPOT", new Vector2(.5f, 1), new Vector2(0, -770), new Vector2(680, 120), Cyan, Ink, () => Mobile.Share(ShareText(), "Share ORBIT DEPOT"), out _);
+        Txt(card, "Your depot saves automatically", 28, new Vector2(.5f, 0), new Vector2(0, 80), Soft);
+        pauseUI.gameObject.SetActive(false);
+    }
+
+    string ShareText()
+    {
+        var g = Game.I;
+        return "I'm running " + g.DepotName + " in ORBIT DEPOT and have shipped " + Kit.Money(g.Save.lifetime) + " of cargo across the galaxy. Can you run a faster floor?\n"
+            + "https://play.google.com/store/apps/details?id=com.mellovibes.orbitdepot";
+    }
+
+    public void Pause()
+    {
+        if (!pauseUI || Paused) return;
+        Paused = true;
+        Time.timeScale = 0f; AudioListener.pause = true;
+        RefreshSound();
+        pauseUI.gameObject.SetActive(true);
+        pauseUI.SetAsLastSibling();
+        Game.I.Persist();
+    }
+
+    public void Resume()
+    {
+        if (!Paused) return;
+        Paused = false;
+        Time.timeScale = 1f; AudioListener.pause = false;
+        pauseUI.gameObject.SetActive(false);
+    }
+
+    // Android back: from the pause menu to the home screen, out of any open panel, otherwise pause
+    public void Back()
+    {
+        if (Paused) { Mobile.MoveToBack(); return; }
+        if (modal != null) { var a = modalBack; CloseModal(); a?.Invoke(); return; }
+        Pause();
     }
 
     // ---------------- per-frame ----------------
@@ -489,7 +563,7 @@ public class UI : MonoBehaviour
         // landscape: the canvas matches height, so scale the HUD up to a comfortable size
         float hs = root.rect.width > root.rect.height ? 1.3f : 1f;
         hud.anchorMin = hud.anchorMax = new Vector2(.5f, .5f);
-        hud.sizeDelta = root.rect.size / hs; hud.localScale = Vector3.one * hs;
+        hud.sizeDelta = safe.rect.size / hs; hud.localScale = Vector3.one * hs;
         tagScale = hs > 1f ? 1.2f : 1f; tagLayer.localScale = Vector3.one * tagScale;   // world tags grow a little too (they position by screen point)
         UpdateJoystick();
         if (Game.I.Dev && Input.GetKeyDown(KeyCode.H)) canvas.enabled = !canvas.enabled;   // dev: clean frames for store art
@@ -506,6 +580,8 @@ public class UI : MonoBehaviour
         walletIcon.localScale = Vector3.one * (1f + moneyPunch * 0.25f);
 
         depotText.text = g.DepotName;
+        // narrow portrait screens: slide the depot panel right so it clears the wallet
+        depotPanel.anchoredPosition = new Vector2(Mathf.Max(0, 640 - hud.sizeDelta.x * 0.5f), -72);
         expBar.Set(g.ExpansionProgress, udt);
         expText.text = "EXPANSION  " + g.PadsDone + " / " + g.PadsTotal;
 

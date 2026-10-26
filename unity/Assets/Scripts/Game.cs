@@ -105,6 +105,7 @@ public class Game : MonoBehaviour
     {
         I = this;
         Application.targetFrameRate = -1;
+        Mobile.Init();   // phones: native refresh rate (Android otherwise caps at 30), screen stays awake
         QualitySettings.shadowDistance = 45f; QualitySettings.shadowCascades = 1;
         QualitySettings.shadowResolution = ShadowResolution.Medium; QualitySettings.antiAliasing = 2;
 
@@ -229,8 +230,9 @@ public class Game : MonoBehaviour
         }
     }
 
-    void OnApplicationPause(bool p) { if (p) Persist(); }
-    void OnApplicationFocus(bool f) { if (!f) Persist(); }
+    // Play build: a call, notification shade or the home button pauses the floor
+    void OnApplicationPause(bool p) { if (p) { Persist(); if (Mobile.Native && UI.I) UI.I.Pause(); } }
+    void OnApplicationFocus(bool f) { if (!f) { Persist(); if (Mobile.Native && UI.I) UI.I.Pause(); } }
     void OnApplicationQuit() => Persist();
 
     public void SavePad(string id, double paid)
@@ -984,6 +986,7 @@ public class Game : MonoBehaviour
     {
         float dt = Time.deltaTime;
         if (Input.GetMouseButtonDown(0) || Input.touchCount > 0 || Input.anyKeyDown) Sfx.I.StartMusic();
+        if (Mobile.Native && Input.GetKeyDown(KeyCode.Escape)) UI.I.Back();   // Android back button
         if (launching) return;
         UpdateOrders(dt);
         UpdateGuidance();

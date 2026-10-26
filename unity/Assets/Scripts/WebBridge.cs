@@ -27,6 +27,8 @@ public class WebBridge : MonoBehaviour
         {
 #if UNITY_WEBGL && !UNITY_EDITOR
             return SD_AdsAvailable() == 1;
+#elif UNITY_ANDROID && !UNITY_EDITOR
+            return false;   // the Play build has no ads: Power Pack and offline 2x are never offered behind one
 #else
             return true;
 #endif
@@ -35,6 +37,7 @@ public class WebBridge : MonoBehaviour
 
     public void ShowRewarded(Action<bool> done)
     {
+        if (Mobile.Native) { done?.Invoke(false); return; }
         pending = done;
         Sfx.I.SetMuted(true);
 #if UNITY_WEBGL && !UNITY_EDITOR
@@ -87,6 +90,8 @@ public class WebBridge : MonoBehaviour
     {
 #if UNITY_WEBGL && !UNITY_EDITOR
         SD_Vibrate(ms);
+#else
+        Mobile.Vibrate(ms);
 #endif
     }
 
