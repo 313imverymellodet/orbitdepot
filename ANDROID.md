@@ -1,6 +1,6 @@
 # Publishing ORBIT DEPOT on Google Play
 
-This repo builds both the browser game (`DepotBuild` → `dist/`) and the Android app (`AndroidBuild` → `android/`). The Android build is offline-only with no ads: the website's portal ads, Sign in with Base badges and analytics are left out (the Power Pack and the offline 2× bonus never sit behind an ad), and the phone gets a pause menu, Android back-button handling, safe areas for notches, haptics and the share sheet.
+This repo builds both the browser game (`DepotBuild` → `dist/`) and the Android app (`AndroidBuild` → `android/`). The Android build plays offline. The website's portal ads, Sign in with Base badges and analytics are left out. Every ad call site (the rewarded Power Pack and the offline 2× bonus) goes through `MobileAds` in `unity/Assets/Scripts/Mobile.cs`. For now that is a stub, so the game takes its no-ad path (the Power Pack is free, and the offline bonus has no 2× option) until a mobile ads SDK is plugged in. The phone gets a pause menu, Android back-button handling, safe areas for notches, haptics and the share sheet.
 
 | | |
 |---|---|
@@ -69,11 +69,11 @@ Create the app at <https://play.google.com/console> → **Create app** → name 
 | Section | Answer |
 |---|---|
 | Privacy policy | `https://play.mellovibes.io/privacy` |
-| Ads | **No**, the app contains no ads |
+| Ads | TBD (ads being added) |
 | App access | All functionality is available without special access |
 | Content rating (IARC questionnaire) | Everyone (no violence, no gambling, no user content) |
 | Target audience | 13 and over (simplest; avoids the Families program paperwork) |
-| Data safety | **No data collected, no data shared.** No account creation. (Saves stay on the device; the only permission is vibration.) |
+| Data safety | TBD (ads being added) |
 | Government / financial / health / news | No |
 
 **Release:**

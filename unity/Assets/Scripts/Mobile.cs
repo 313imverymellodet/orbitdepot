@@ -90,6 +90,17 @@ public static class Mobile
     }
 }
 
+// Ads on the Play build. A stub for now: the real SDK and ad unit IDs get plugged in here later,
+// and every ad call site in the game already goes through it (WebBridge routes to it on Android).
+public static class MobileAds
+{
+    public static bool Available => false;
+
+    public static void ShowRewarded(System.Action<bool> done) => done?.Invoke(false);
+
+    public static void ShowInterstitial() { }
+}
+
 // Keeps a full-screen UI rect inside Screen.safeArea (notches, punch-hole cameras, gesture bar).
 [ExecuteAlways]
 public class SafeArea : MonoBehaviour
