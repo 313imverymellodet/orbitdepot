@@ -61,7 +61,8 @@ public class UI : MonoBehaviour
     // pause (Play build only): the HUD button, Android back, and leaving the app
     public bool Paused { get; private set; }
     RectTransform pauseUI;
-    Text pauseSound, pauseHaptics;
+    Text pauseSound, pauseHaptics, removeAdsLabel;
+    Button removeAdsBtn, privacyBtn;
 
     readonly List<WorldTag> tags = new List<WorldTag>();
 
@@ -494,7 +495,7 @@ public class UI : MonoBehaviour
         var b = Txt(card, body, 36, new Vector2(.5f, 1), new Vector2(0, -220), Soft, TextAnchor.MiddleCenter, 820);
         b.horizontalOverflow = HorizontalWrapMode.Wrap; b.rectTransform.sizeDelta = new Vector2(820, 160);
         float y = 150;
-        if (ad != null) Button(card, "WATCH AD: " + ad, new Vector2(.5f, 0), new Vector2(0, y + 150), new Vector2(720, 120), Gold, Ink, () => { CloseModal(); onAd(); }, out _);
+        if (ad != null) Button(card, (WebBridge.AdFree ? "FREE: " : "WATCH AD: ") + ad, new Vector2(.5f, 0), new Vector2(0, y + 150), new Vector2(720, 120), Gold, Ink, () => { CloseModal(); onAd(); }, out _);
         Button(card, ok, new Vector2(.5f, 0), new Vector2(cancel != null ? 180 : 0, y - (ad != null ? 10 : 0)), new Vector2(cancel != null ? 340 : 720, 120), Kit.Hex("#35C46A"), Color.white, () => { CloseModal(); onOk?.Invoke(); }, out _);
         if (cancel != null) Button(card, cancel, new Vector2(.5f, 0), new Vector2(-190, y), new Vector2(340, 120), new Color(1, 1, 1, 0.12f), Color.white, CloseModal, out _);
     }
@@ -505,7 +506,7 @@ public class UI : MonoBehaviour
         pauseUI = Fill("pause", root);
         var shade = pauseUI.gameObject.AddComponent<Image>(); shade.color = new Color(0.01f, 0.02f, 0.06f, 0.86f);
         var ps = Fill("safe", pauseUI); ps.gameObject.AddComponent<SafeArea>();
-        var card = PanelBox(ps, new Vector2(.5f, .5f), Vector2.zero, new Vector2(820, 1060), Kit.A(Cyan, 0.4f), 0.97f);
+        var card = PanelBox(ps, new Vector2(.5f, .5f), Vector2.zero, new Vector2(820, 1180), Kit.A(Cyan, 0.4f), 0.97f);
         Txt(card, "ORBIT DEPOT", 28, new Vector2(.5f, 1), new Vector2(0, -60), Cyan);
         var t = Txt(card, "PAUSED", 96, new Vector2(.5f, 1), new Vector2(0, -150), Color.white); Shadow(t, 4);
         Button(card, "RESUME", new Vector2(.5f, 1), new Vector2(0, -320), new Vector2(680, 150), Kit.Hex("#35C46A"), Color.white, Resume, out var rl);
@@ -517,8 +518,23 @@ public class UI : MonoBehaviour
             Mobile.Vibrate(30); RefreshSound();
         }, out pauseHaptics);
         Button(card, "SHARE ORBIT DEPOT", new Vector2(.5f, 1), new Vector2(0, -770), new Vector2(680, 120), Cyan, Ink, () => Mobile.Share(ShareText(), "Share ORBIT DEPOT"), out _);
-        Txt(card, "Your depot saves automatically", 28, new Vector2(.5f, 0), new Vector2(0, 80), Soft);
+        removeAdsBtn = Button(card, "", new Vector2(.5f, 1), new Vector2(-135, -905), new Vector2(410, 96), new Color(1, 1, 1, 0.1f), Gold, Ads.BuyRemoveAds, out removeAdsLabel);
+        removeAdsLabel.fontSize = 32;
+        privacyBtn = Button(card, "PRIVACY", new Vector2(.5f, 1), new Vector2(210, -905), new Vector2(260, 96), new Color(1, 1, 1, 0.1f), Soft, Ads.ShowPrivacyOptions, out var pl);
+        pl.fontSize = 32;
+        Txt(card, "Your depot saves automatically", 28, new Vector2(.5f, 0), new Vector2(0, 70), Soft);
         pauseUI.gameObject.SetActive(false);
+        Ads.Changed += RefreshAds;
+        RefreshAds();
+    }
+
+    // Remove Ads pass and the consent form (EEA/UK), from the pause menu
+    void RefreshAds()
+    {
+        if (!removeAdsBtn) return;
+        removeAdsBtn.gameObject.SetActive(!Ads.AdFree && Ads.CanBuyRemoveAds);
+        removeAdsLabel.text = "NO ADS  ·  " + Ads.RemoveAdsPrice;
+        privacyBtn.gameObject.SetActive(Ads.PrivacyOptionsRequired);
     }
 
     string ShareText()

@@ -85,6 +85,9 @@ public class WebBridge : MonoBehaviour
 #endif
     }
 
+    // Play build: rewarded offers show when a video is loaded or the player owns the Remove Ads pass
+    public static bool AdFree => Mobile.Native && Ads.AdFree;
+
     // a short buzz on phones that support it (pickups, unlocks)
     public static void Vibrate(int ms)
     {

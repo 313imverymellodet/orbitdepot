@@ -4,7 +4,7 @@
 
 **Short description** (77/80): Receive, pick, pack and ship cargo across the galaxy. Build your space depot!
 
-**Full description** (1501/4000):
+**Full description** (1571/4000):
 
 ```
 Run a fulfillment floor on a space station.
@@ -32,6 +32,7 @@ MADE FOR PHONES
 • A guided first shift teaches the whole loop
 • Your crew keeps shipping while you're away
 • Plays offline, no account needed
+• Optional rewarded videos for bonuses, or a one-time Remove Ads pass
 • Pauses itself if a call comes in; sound and vibration can be turned off
 
 Clock in, boss. The galaxy is waiting for its packages.

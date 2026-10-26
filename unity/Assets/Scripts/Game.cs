@@ -106,6 +106,7 @@ public class Game : MonoBehaviour
         I = this;
         Application.targetFrameRate = -1;
         Mobile.Init();   // phones: native refresh rate (Android otherwise caps at 30), screen stays awake
+        Ads.Init();      // Play build: AdMob rewarded + the Remove Ads pass (no-op elsewhere)
         QualitySettings.shadowDistance = 45f; QualitySettings.shadowCascades = 1;
         QualitySettings.shadowResolution = ShadowResolution.Medium; QualitySettings.antiAliasing = 2;
 
@@ -231,8 +232,9 @@ public class Game : MonoBehaviour
     }
 
     // Play build: a call, notification shade or the home button pauses the floor
-    void OnApplicationPause(bool p) { if (p) { Persist(); if (Mobile.Native && UI.I) UI.I.Pause(); } }
-    void OnApplicationFocus(bool f) { if (!f) { Persist(); if (Mobile.Native && UI.I) UI.I.Pause(); } }
+    // (not while a rewarded video has the screen: that focus loss is the ad, not the player leaving)
+    void OnApplicationPause(bool p) { if (p) { Persist(); if (Mobile.Native && UI.I && !Ads.Showing) UI.I.Pause(); } }
+    void OnApplicationFocus(bool f) { if (!f) { Persist(); if (Mobile.Native && UI.I && !Ads.Showing) UI.I.Pause(); } }
     void OnApplicationQuit() => Persist();
 
     public void SavePad(string id, double paid)

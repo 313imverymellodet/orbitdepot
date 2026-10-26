@@ -1,6 +1,12 @@
 # Publishing ORBIT DEPOT on Google Play
 
-This repo builds both the browser game (`DepotBuild` → `dist/`) and the Android app (`AndroidBuild` → `android/`). The Android build plays offline. The website's portal ads, Sign in with Base badges and analytics are left out. Both rewarded ad offers (the Power Pack and the offline 2× bonus) go through `Ads` in `unity/Assets/Scripts/Ads.cs`, which handles AdMob rewarded ads and the "Remove Ads" pass. The pass grants rewards without watching. For now `Ads` is a stub, so the game takes its no-ad path (the Power Pack is free, and the offline bonus has no 2× option). The phone gets a pause menu, Android back-button handling, safe areas for notches, haptics and the share sheet.
+This repo builds both the browser game (`DepotBuild` → `dist/`) and the Android app (`AndroidBuild` → `android/`). The Android build plays offline. The website's portal ads, Sign in with Base badges and analytics are left out. Monetization is `unity/Assets/Scripts/Ads.cs`, the same file in every Mello Vibes game:
+
+- AdMob rewarded ads, rewarded only, behind Google's consent form for EEA/UK players. They are offered for the Power Pack (75 s of 2× packing and pay) and the 2× offline bonus on the welcome-back screen.
+- A one-time **Remove Ads** purchase (`remove_ads`), which works as an ad-free pass: those rewards are granted without a video.
+- The pause menu has **NO ADS · price** and, where required, **PRIVACY** buttons.
+
+With no video loaded, the Power Pack still works for free (60 s, longer recharge), as it does on the web. The phone gets a pause menu, Android back-button handling, safe areas for notches, haptics and the share sheet.
 
 | | |
 |---|---|
@@ -69,12 +75,18 @@ Create the app at <https://play.google.com/console> → **Create app** → name 
 | Section | Answer |
 |---|---|
 | Privacy policy | `https://play.mellovibes.io/privacy` |
-| Ads | TBD (ads being added) |
+| Ads | **Yes**, the app contains ads (AdMob rewarded videos) |
 | App access | All functionality is available without special access |
 | Content rating (IARC questionnaire) | Everyone (no violence, no gambling, no user content) |
 | Target audience | 13 and over (simplest; avoids the Families program paperwork) |
-| Data safety | TBD (ads being added) |
+| Data safety | Advertising ID, approximate location, app interactions and diagnostics are collected and shared with Google AdMob for advertising; encrypted in transit; no account creation. |
 | Government / financial / health / news | No |
+
+**Monetization** (before the first production release):
+
+1. AdMob → **Apps → Add app** (Android, `com.mellovibes.orbitdepot`) → create a **Rewarded** ad unit. Paste the app ID and rewarded unit ID into `AppId` / `RewardedUnitId` in `unity/Assets/Scripts/Ads.cs`. `AndroidBuild.Release` refuses Google's test IDs unless you pass `-testAds` (internal testing only).
+2. Play Console → **Monetize → In-app products** → create the non-consumable `remove_ads` at $2.99 and activate it. The app must have been uploaded once (internal testing is enough) before products can be created.
+3. AdMob → **Privacy & messaging** → publish a GDPR consent message for the app, so the consent form shows in the EEA/UK.
 
 **Release:**
 
