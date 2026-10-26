@@ -28,7 +28,7 @@ public class WebBridge : MonoBehaviour
 #if UNITY_WEBGL && !UNITY_EDITOR
             return SD_AdsAvailable() == 1;
 #elif UNITY_ANDROID && !UNITY_EDITOR
-            return MobileAds.Available;
+            return Ads.Available || Ads.AdFree;
 #else
             return true;
 #endif
@@ -37,7 +37,7 @@ public class WebBridge : MonoBehaviour
 
     public void ShowRewarded(Action<bool> done)
     {
-        if (Mobile.Native) { MobileAds.ShowRewarded(done); return; }
+        if (Mobile.Native) { Ads.ShowRewarded(done); return; }
         pending = done;
         Sfx.I.SetMuted(true);
 #if UNITY_WEBGL && !UNITY_EDITOR

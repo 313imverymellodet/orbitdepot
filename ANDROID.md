@@ -1,6 +1,6 @@
 # Publishing ORBIT DEPOT on Google Play
 
-This repo builds both the browser game (`DepotBuild` → `dist/`) and the Android app (`AndroidBuild` → `android/`). The Android build plays offline. The website's portal ads, Sign in with Base badges and analytics are left out. Every ad call site (the rewarded Power Pack and the offline 2× bonus) goes through `MobileAds` in `unity/Assets/Scripts/Mobile.cs`. For now that is a stub, so the game takes its no-ad path (the Power Pack is free, and the offline bonus has no 2× option) until a mobile ads SDK is plugged in. The phone gets a pause menu, Android back-button handling, safe areas for notches, haptics and the share sheet.
+This repo builds both the browser game (`DepotBuild` → `dist/`) and the Android app (`AndroidBuild` → `android/`). The Android build plays offline. The website's portal ads, Sign in with Base badges and analytics are left out. Both rewarded ad offers (the Power Pack and the offline 2× bonus) go through `Ads` in `unity/Assets/Scripts/Ads.cs`, which handles AdMob rewarded ads and the "Remove Ads" pass. The pass grants rewards without watching. For now `Ads` is a stub, so the game takes its no-ad path (the Power Pack is free, and the offline bonus has no 2× option). The phone gets a pause menu, Android back-button handling, safe areas for notches, haptics and the share sheet.
 
 | | |
 |---|---|
