@@ -27,7 +27,7 @@ public class WebBridge : MonoBehaviour
         {
 #if UNITY_WEBGL && !UNITY_EDITOR
             return SD_AdsAvailable() == 1;
-#elif UNITY_ANDROID && !UNITY_EDITOR
+#elif (UNITY_ANDROID || UNITY_IOS) && !UNITY_EDITOR
             return Ads.Available || Ads.AdFree;
 #else
             return true;
@@ -85,7 +85,7 @@ public class WebBridge : MonoBehaviour
 #endif
     }
 
-    // Play build: rewarded offers show when a video is loaded or the player owns the Remove Ads pass
+    // Play / App Store builds: rewarded offers show when a video is loaded or the player owns the Remove Ads pass
     public static bool AdFree => Mobile.Native && Ads.AdFree;
 
     // a short buzz on phones that support it (pickups, unlocks)

@@ -62,7 +62,7 @@ public class UI : MonoBehaviour
     public bool Paused { get; private set; }
     RectTransform pauseUI;
     Text pauseSound, pauseHaptics, removeAdsLabel;
-    Button removeAdsBtn, privacyBtn;
+    Button removeAdsBtn, restoreBtn, privacyBtn;
 
     readonly List<WorldTag> tags = new List<WorldTag>();
 
@@ -518,23 +518,38 @@ public class UI : MonoBehaviour
             Mobile.Vibrate(30); RefreshSound();
         }, out pauseHaptics);
         Button(card, "SHARE ORBIT DEPOT", new Vector2(.5f, 1), new Vector2(0, -770), new Vector2(680, 120), Cyan, Ink, () => Mobile.Share(ShareText(), "Share ORBIT DEPOT"), out _);
-        removeAdsBtn = Button(card, "", new Vector2(.5f, 1), new Vector2(-135, -905), new Vector2(410, 96), new Color(1, 1, 1, 0.1f), Gold, Ads.BuyRemoveAds, out removeAdsLabel);
-        removeAdsLabel.fontSize = 32;
-        privacyBtn = Button(card, "PRIVACY", new Vector2(.5f, 1), new Vector2(210, -905), new Vector2(260, 96), new Color(1, 1, 1, 0.1f), Soft, Ads.ShowPrivacyOptions, out var pl);
-        pl.fontSize = 32;
+        removeAdsBtn = Button(card, "", new Vector2(.5f, 1), new Vector2(0, -905), new Vector2(300, 96), new Color(1, 1, 1, 0.1f), Gold, Ads.BuyRemoveAds, out removeAdsLabel);
+        removeAdsLabel.fontSize = 28;
+        restoreBtn = Button(card, "RESTORE", new Vector2(.5f, 1), new Vector2(0, -905), new Vector2(220, 96), new Color(1, 1, 1, 0.1f), Soft, Ads.RestorePurchases, out var rsl);
+        rsl.fontSize = 28;
+        privacyBtn = Button(card, "PRIVACY", new Vector2(.5f, 1), new Vector2(0, -905), new Vector2(220, 96), new Color(1, 1, 1, 0.1f), Soft, Ads.ShowPrivacyOptions, out var pl);
+        pl.fontSize = 28;
         Txt(card, "Your depot saves automatically", 28, new Vector2(.5f, 0), new Vector2(0, 70), Soft);
         pauseUI.gameObject.SetActive(false);
         Ads.Changed += RefreshAds;
         RefreshAds();
     }
 
-    // Remove Ads pass and the consent form (EEA/UK), from the pause menu
+    // Remove Ads pass, restoring it (App Store) and the consent form (EEA/UK), from the pause menu
     void RefreshAds()
     {
         if (!removeAdsBtn) return;
         removeAdsBtn.gameObject.SetActive(!Ads.AdFree && Ads.CanBuyRemoveAds);
         removeAdsLabel.text = "NO ADS  ·  " + Ads.RemoveAdsPrice;
+        restoreBtn.gameObject.SetActive(Ads.ShowRestoreButton);
         privacyBtn.gameObject.SetActive(Ads.PrivacyOptionsRequired);
+        // centre whichever of the three are showing on one row
+        var row = new List<Button>();
+        foreach (var b in new[] { removeAdsBtn, restoreBtn, privacyBtn }) if (b.gameObject.activeSelf) row.Add(b);
+        float total = -20, x;
+        foreach (var b in row) total += ((RectTransform)b.transform).sizeDelta.x + 20;
+        x = -total / 2;
+        foreach (var b in row)
+        {
+            var rt = (RectTransform)b.transform;
+            rt.anchoredPosition = new Vector2(x + rt.sizeDelta.x / 2, -905);
+            x += rt.sizeDelta.x + 20;
+        }
     }
 
     string ShareText()
