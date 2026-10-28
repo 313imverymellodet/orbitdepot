@@ -30,7 +30,7 @@ public class WorldTag
 
 // ORBIT DEPOT HUD: an "ops console" look that matches the floor signage. Dark glass panels, accent rims,
 // rolling numbers, cash that flies into the wallet, an objective banner that names the station, celebration banners.
-public class UI : MonoBehaviour
+public partial class UI : MonoBehaviour
 {
     public static UI I;
     Canvas canvas; CanvasScaler scaler;
@@ -53,7 +53,7 @@ public class UI : MonoBehaviour
     HudBar expBar, questBar;
     float moneyPunch, questPunch, objShown; double shownMoney;
     string lastHint;
-    public bool Blocking => (modal != null && modalBlocks) || Paused;
+    public bool Blocking => (modal != null && modalBlocks) || Paused || TitleUp;
     bool modalBlocks;
     RectTransform modal;
     Action modalBack;
@@ -95,7 +95,7 @@ public class UI : MonoBehaviour
 
         if (Mobile.Native) BuildPause();
         RefreshSound();
-        StartCoroutine(Intro());
+        if (Mobile.Native) ShowTitle(); else StartCoroutine(Intro());   // phones get a title screen; the web build drops straight in
     }
 
     // ---------------- building blocks ----------------
@@ -556,12 +556,12 @@ public class UI : MonoBehaviour
     {
         var g = Game.I;
         return "I'm running " + g.DepotName + " in ORBIT DEPOT and have shipped " + Kit.Money(g.Save.lifetime) + " of cargo across the galaxy. Can you run a faster floor?\n"
-            + "https://play.google.com/store/apps/details?id=com.mellovibes.orbitdepot";
+            + (Application.platform == RuntimePlatform.IPhonePlayer ? "https://orbitdepot.vercel.app" : "https://play.google.com/store/apps/details?id=com.mellovibes.orbitdepot");
     }
 
     public void Pause()
     {
-        if (!pauseUI || Paused) return;
+        if (!pauseUI || Paused || TitleUp) return;   // the title screen already holds the game
         Paused = true;
         Time.timeScale = 0f; AudioListener.pause = true;
         RefreshSound();
@@ -589,6 +589,8 @@ public class UI : MonoBehaviour
     // ---------------- per-frame ----------------
     void Update()
     {
+        if (titleUI) titleUI.SetAsLastSibling();   // stays above the welcome-back card until PLAY
+        hud.gameObject.SetActive(!TitleUp); tagLayer.gameObject.SetActive(!TitleUp);
         float aspect = (float)Screen.width / Mathf.Max(1, Screen.height);
         scaler.matchWidthOrHeight = aspect > 0.75f ? 1f : 0f;
         // landscape: the canvas matches height, so scale the HUD up to a comfortable size
