@@ -25,8 +25,8 @@ public static class Ads
     // AndroidBuild.Release and IosBuild refuse to ship them unless -testAds. ----
     public const string AndroidAppId = "ca-app-pub-3940256099942544~3347511713";
     public const string AndroidRewardedId = "ca-app-pub-3940256099942544/5224354917";
-    public const string IosAppId = "ca-app-pub-3940256099942544~1458002511";
-    public const string IosRewardedId = "ca-app-pub-3940256099942544/1712485313";
+    public const string IosAppId = "ca-app-pub-1440285360223827~5774639574";
+    public const string IosRewardedId = "ca-app-pub-1440285360223827/7002914586";
     public const string RemoveAdsProduct = "remove_ads";   // Play Console and App Store Connect: non-consumable
     // RevenueCat public SDK keys (app.revenuecat.com → project → API keys: "appl_..." / "goog_..."). Only games built
     // with MV_REVENUECAT read them; an empty key keeps that platform on Unity IAP.
