@@ -23,12 +23,15 @@ public class Sfx : MonoBehaviour
         voices = new AudioSource[8];
         for (int i = 0; i < voices.Length; i++) { voices[i] = gameObject.AddComponent<AudioSource>(); voices[i].playOnAwake = false; }
         music = gameObject.AddComponent<AudioSource>();
-        music.loop = true; music.volume = 0.32f; music.playOnAwake = false;
+        music.loop = true; music.volume = 0.6f; music.playOnAwake = false;
         Build();
         music.clip = Music();
+        music.mute = MusicOff;
     }
 
     public void SetMuted(bool m) { Muted = m; AudioListener.volume = m ? 0 : 1; }
+    public static bool MusicOff => PlayerPrefs.GetInt("music_off", 0) == 1;
+    public void SetMusic(bool on) { PlayerPrefs.SetInt("music_off", on ? 0 : 1); PlayerPrefs.Save(); music.mute = !on; }
     public void StartMusic() { if (!music.isPlaying) music.Play(); }
 
     void Play(AudioClip c, float vol, float pitch = 1f)
@@ -50,7 +53,7 @@ public class Sfx : MonoBehaviour
     public void Scan() { if (Time.unscaledTime - lastScan < 0.06f) return; lastScan = Time.unscaledTime; Play(scan, 0.28f, Random.Range(0.98f, 1.03f)); }
     public void Tape() => Play(tape, 0.4f, Random.Range(0.9f, 1.1f));
     public void Lift() => Play(lift, 0.45f);
-    public void MusicBoost() => music.volume = 0.42f;
+    public void MusicBoost() => music.volume = 0.72f;
     public void Rush() { Play(unlock, 0.7f, 1.25f); music.pitch = 1.12f; }
     public void RushEnd() => music.pitch = 1f;
 

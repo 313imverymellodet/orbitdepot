@@ -27,6 +27,8 @@ public class WebBridge : MonoBehaviour
         {
 #if UNITY_WEBGL && !UNITY_EDITOR
             return SD_AdsAvailable() == 1;
+#elif (UNITY_ANDROID || UNITY_IOS) && !UNITY_EDITOR
+            return Ads.Available || Ads.AdFree;
 #else
             return true;
 #endif
@@ -35,6 +37,7 @@ public class WebBridge : MonoBehaviour
 
     public void ShowRewarded(Action<bool> done)
     {
+        if (Mobile.Native) { Ads.ShowRewarded(done); return; }
         pending = done;
         Sfx.I.SetMuted(true);
 #if UNITY_WEBGL && !UNITY_EDITOR
@@ -82,11 +85,16 @@ public class WebBridge : MonoBehaviour
 #endif
     }
 
+    // Play / App Store builds: rewarded offers show when a video is loaded or the player owns the Remove Ads pass
+    public static bool AdFree => Mobile.Native && Ads.AdFree;
+
     // a short buzz on phones that support it (pickups, unlocks)
     public static void Vibrate(int ms)
     {
 #if UNITY_WEBGL && !UNITY_EDITOR
         SD_Vibrate(ms);
+#else
+        Mobile.Vibrate(ms);
 #endif
     }
 

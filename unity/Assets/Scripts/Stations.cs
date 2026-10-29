@@ -708,7 +708,7 @@ public class PowerPack : MonoBehaviour
             if (stay > 0.5f) { stay = -99f; g.RequestPower(); }
         }
         else if (!Zone.PlayerIn) stay = 0;
-        Card.Set(g.PowerLeft > 0 ? "ACTIVE  " + Mathf.CeilToInt(g.PowerLeft) + "s" : g.PowerReady ? (WebBridge.AdsAvailable ? "BONUS READY · AD" : "BONUS READY") : "RECHARGING " + UI.Clock(g.PowerCooldown), g.PowerReady);
+        Card.Set(g.PowerLeft > 0 ? "ACTIVE  " + Mathf.CeilToInt(g.PowerLeft) + "s" : g.PowerReady ? (WebBridge.AdsAvailable ? (WebBridge.AdFree ? "BONUS READY · FREE" : "BONUS READY · AD") : "BONUS READY") : "RECHARGING " + UI.Clock(g.PowerCooldown), g.PowerReady);
         Zone.Color = g.PowerLeft > 0 ? Kit.Hex("#8cff9e") : Kit.Hex("#ff5c9a");
     }
 }
